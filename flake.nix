@@ -69,6 +69,7 @@
           run = ''cargo run $@ '';
           # utest = ''cargo nextest run --workspace --nocapture -- $SINGLE_TEST '';
           utest = ''set -x; cargo nextest run $(packages) --nocapture "$@" -- $SINGLE_TEST '';
+          check = ''nix flake check'';
 
           prun = ''cargo run -p $@ '';
           build = ''nix build . --show-trace '';
