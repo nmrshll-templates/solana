@@ -1,13 +1,21 @@
-[package]
-name = "my_lib"
-version = "0.1.0"
-edition = "2021"
-
 [workspace]
-members = []
+resolver = "2"
+package = { version = "0.1.0", edition = "2024" }
+metadata.crane.name="my-workspace"
+members = [
+    "crates/*",
+]
 
 [workspace.dependencies]
-
-[dependencies]
+# axum = "^0.8"
+# fastrace = "^0.7"
+# log = "^0.4"
+# reqwest = "^0.12"
+# serde = "^1.0"
+# serde_json = "^1.0"
+# thiserror = "^2.0"
+# tokio = "^1.45"
+# tracing = "^0.1"
+# tower = "^0.5"
 
 
