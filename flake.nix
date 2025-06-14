@@ -21,44 +21,6 @@
         inherit (pkgs) lib stdenv;
 
         srcs = {
-          # platform-tools = let version = "v1.39"; sys = {x86_64-linux = "" }.${pkgs.system}; in pkgs.fetchzip {
-          #   url = "https://github.com/solana-labs/platform-tools/releases/download/"
-          #     + "${version}/platform-tools-${sys}.tar.bz2";
-          #   sha256 = hash;
-          #   stripRoot = false;
-          # };
-          # platform-tools = rec {
-          #   version = "v1.39";
-          #   make = sys: hash: pkgs.fetchzip {
-          #     url = "https://github.com/solana-labs/platform-tools/releases/download/"
-          #       + "${version}/platform-tools-${sys}.tar.bz2";
-          #     sha256 = hash;
-          #     stripRoot = false;
-          #   };
-          #   x86_64-linux =
-          #     make "linux-x86_64" "sha256-PAlPrq7WP8T4Pq78mCbPLGpywGAgqTPkas1kX2yKhJI=";
-          #   aarch64-darwin =
-          #     make "osx-aarch64" "sha256-nijBjC8R0lxVsuPZI8m6JgT7rh4QcJWPG28V+RI3QUk=";
-          #   x86_64-darwin =
-          #     make "osx-x86_64" "";
-          # };
-
-          # cli = rec {
-          #   version = "v1.17.6"; # TODO 1.18.26
-          #   name = "solana-cli";
-          #   make = sys: hash: fetchTarball {
-          #     url = "https://github.com/solana-labs/solana/releases/download/"
-          #       + "${version}/solana-release-${sys}.tar.bz2";
-          #     sha256 = hash;
-          #   };
-          #   x86_64-linux =
-          #     make "x86_64-unknown-linux-gnu" "sha256:1qgwxaq906azfvjnkyvqlx8q2b51ahy75wrdlykkx1l2xs5048fh";
-          #   aarch64-darwin =
-          #     make "aarch64-apple-darwin" "sha256:1ssqd987r8q9fximi9a5c34jx8k7hy265i4h45dlbrykkm7r7n2p";
-          #   x86_64-darwin =
-          #     make "x86_64-apple-darwin" "";
-          # };
-
           agave =
             let version = "2.2.3"; sha256 = "sha256-nRCamrwzoPX0cAEcP6p0t0t9Q41RjM6okupOPkJH5lQ=";
             in {
@@ -132,7 +94,6 @@
 
           solana-platform-tools = { pkgs, version ? "1.45" }:
             let
-              # version = "1.45";
               source = srcs.solana-platform-tools.${version};
             in
             stdenv.mkDerivation {
@@ -186,66 +147,13 @@
               stripExclude = [ "*.rlib" ];
             };
 
-          # solana-rust = stdenv.mkDerivation {
-          #   pname = "solana-rust";
-          #   version = solana-cli.version;
-
-          #   phases = [ "installPhase" ];
-          #   nativeBuildInputs = [ autoPatchelfHook ];
-
-          #   buildInputs = [ solana-platform-tools ];
-
-          #   installPhase = ''
-          #     mkdir -p $out/bin
-          #     rust=${solana-platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-          #     ln -s $rust/cargo $out/bin/cargo
-          #     ln -s $rust/rustc $out/bin/rustc
-          #   '';
-          # };
-
-          # solana-platform = pkgs.stdenv.mkDerivation {
-          #   name = "solana-rust";
-          #   version = ownPkgs.platform-tools.version;
-          #   src = ownPkgs.platform-tools.${system};
-          #   installPhase = ''
-          #     mkdir -p $out
-          #     cp -r $src/* $out
-          #     chmod 0755 -R $out
-          #   '';
-          # };
-          # solana-cli = pkgs.stdenv.mkDerivation {
-          #   name = "solana-cli";
-          #   version = ownPkgs.cli.version;
-          #   src = ownPkgs.cli.${system};
-          #   installPhase = ''
-          #     mkdir -p $out/bin/sdk/sbf/dependencies/platform-tools
-          #     cp -r $src/* $out
-          #     ln -s ${ownPkgs.solana-platform}/* $out/bin/sdk/sbf/dependencies/platform-tools
-          #     ln -s ${ownPkgs.solana-platform}/rust/bin/* $out/bin/
-          #     ln -s ${ownPkgs.solana-platform}/llvm/bin/* $out/bin/
-          #     ln -s $out/bin/ld.lld $out/bin/ld
-          #     chmod 0755 -R $out
-          #   '';
-          # };
-
           solana-cli-2 =
             let
               version = srcs.agave.version;
               src = srcs.agave.src;
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
-              # Use Rust 1.84.1 as required by Agave
-              # rust = rust-bin.stable."1.84.1".default;
-              # rustPlatform = makeRustPlatform {
-              #   cargo = rust;
-              #   rustc = rust;
-              # };
-              # craneLib = crane.overrideToolchain rust;
-
               solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
-
-              # inherit (pkgs.darwin.apple_sdk_11_0) Libsystem;
-              # inherit (pkgs.darwin.apple_sdk_11_0.frameworks) System IOKit AppKit Security;
 
               commonArgs = {
                 pname = "solana-cli";
@@ -257,8 +165,7 @@
                 # Even tho the tests work, a shit ton of them try to connect to a local RPC
                 # or access internet in other ways, eventually failing due to Nix sandbox.
                 # Maybe we could restrict the check to the tests that don't require an RPC,
-                # but judging by the quantity of tests, that seems like a lengthty work and
-                # I'm not in the mood ((ΦωΦ))
+                # but judging by the quantity of tests, that seems like a lengthty work
                 doCheck = false;
 
                 nativeBuildInputs = [
@@ -316,18 +223,6 @@
                     --append-flags --no-rustup-override \
                     --append-flags --skip-tools-install
                 '';
-
-                # meta = with lib; {
-                #   mainProgram = "solana";
-                #   description = "Web-Scale Blockchain for fast, secure, scalable, decentralized apps and marketplaces. ";
-                #   homepage = "https://solana.com";
-                #   license = licenses.asl20;
-                #   maintainers = with maintainers; [
-                #     netfox
-                #     happysalada
-                #   ];
-                #   platforms = platforms.unix;
-                # };
 
                 passthru.updateScript = nix-update-script { };
               }
@@ -454,7 +349,6 @@
         devInputs = [
           # pkgs.solana-cli
           # pkgs.anchor
-          # (dbg solana-nix.packages).${system}.anchor
           pkgs.nodejs_24
           pkgs.yarn
           pkgs.cargo-nextest
@@ -548,7 +442,3 @@
       }
     );
 }
-
-
-
-
