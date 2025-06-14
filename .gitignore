@@ -26,4 +26,7 @@ tarpaulin-report.html
 **/.env.**
 **/**.env
 
+# SOLANA
+**/test-ledger/
+
 
