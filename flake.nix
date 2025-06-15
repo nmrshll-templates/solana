@@ -240,11 +240,10 @@
                 rust-nightly = pkgs.rust-bin.nightly."2025-04-21".minimal;
                 rust = pkgs.rust-bin.stable."1.85.0".default;
                 platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { version = "1.45"; };
-                patches = [ (fetchurl "https://raw.githubusercontent.com/arijoon/solana-nix/87bea8cac979d14c758c24d2b9178c44a6e95b39/patches/anchor-cli/0.31.1.patch") ];
+                patches = [ (fetchurl { url = "https://raw.githubusercontent.com/arijoon/solana-nix/87bea8cac979d14c758c24d2b9178c44a6e95b39/patches/anchor-cli/0.31.1.patch"; sha256 = "sha256:0w07q4cszg54pf5511qxy9fmj1ywqbmqszjl1hsb56dq3xrpax87"; }) ];
               };
               versionDeps = versionsDeps.${version};
 
-              # craneLib = craneLib.overrideToolchain versionDeps.rust;
               craneLib = (crane.mkLib pkgs).overrideToolchain versionDeps.rust;
 
               originalSrc = pkgs.fetchFromGitHub {
@@ -399,7 +398,7 @@
             run = ''cargo run $@ '';
             # utest = ''cargo nextest run --workspace --nocapture -- $SINGLE_TEST '';
             # utest = ''set -x; cargo nextest run $(packages) --nocapture "$@" -- $SINGLE_TEST '';
-            check = ''nix flake check'';
+            check = ''nix flake check --show-trace'';
             # cpkg = ''code ${(dbg solana-nix.packages)}'';
 
             prun = ''cargo run -p $@ '';
@@ -428,7 +427,9 @@
 
       in
       {
-        packages = crates // { default = crates.new; };
+        packages = crates // { default = crates.new; } // {
+          solana-platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+        };
         checks = tests;
         devShells.default = with pkgs; mkShellNoCC {
           inherit env;
