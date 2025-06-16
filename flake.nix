@@ -430,8 +430,8 @@
         packages = crates // { default = crates.new; } // {
           solana-platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
           solana-cli = pkgs.callPackage ownPkgs.solana-cli { };
-          # anchor-cli = pkgs.callPackage ownPkgs.anchor-cli { };
-          # spl-token = pkgs.callPackage ownPkgs.spl-token { };
+          anchor-cli = pkgs.callPackage ownPkgs.anchor-cli { };
+          spl-token = pkgs.callPackage ownPkgs.spl-token { };
         };
         checks = tests;
         devShells.default = with pkgs; mkShellNoCC {
