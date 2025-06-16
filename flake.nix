@@ -18,7 +18,7 @@
           inherit system;
           overlays = [ (import rust-overlay) ];
         };
-        inherit (pkgs) lib stdenv;
+        inherit (pkgs) lib stdenv callPackage;
 
         srcs = {
           agave =
@@ -49,9 +49,9 @@
             targets = [ ];
           };
 
-          spl-token =
+          spl-token = { pkgs, version ? "5.1.0" }:
             let
-              version = "5.1.0";
+              # version = "5.1.0";
               pname = "spl-token";
               srcHash = "sha256-XqQgTbiiLKHSTInxdRh1SYgtwxcyr9Q9XJPx9+tDRwc=";
               cargoHash = "sha256-e07bJvN0+Hhd8qzhr91Ft8JjzIdkxNNkaRofj01oM2c=";
@@ -147,9 +147,9 @@
               stripExclude = [ "*.rlib" ];
             };
 
-          solana-cli-2 =
+          solana-cli = { pkgs, version ? "2.23" }:
             let
-              version = srcs.agave.version;
+              version = srcs.agave.version; # TODO inline source, use version arg
               src = srcs.agave.src;
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
@@ -229,10 +229,10 @@
             );
 
 
-          anchor-cli =
+          anchor-cli = { pkgs, version ? "0.31.1" }:
             let
               pname = "anchor-cli";
-              version = "0.31.1";
+              # version = "0.31.1";
 
               versionsDeps."0.31.1" = {
                 hash = "sha256-c+UybdZCFL40TNvxn0PHR1ch7VPhhJFDSIScetRpS3o=";
@@ -351,10 +351,10 @@
           pkgs.nodejs_24
           pkgs.yarn
           pkgs.cargo-nextest
-          ownPkgs.spl-token
-          ownPkgs.solana-cli-2
+          (callPackage ownPkgs.spl-token { })
+          (callPackage ownPkgs.solana-cli { })
           # ownPkgs.solana-platform-tools
-          ownPkgs.anchor-cli
+          (callPackage ownPkgs.anchor-cli { })
         ];
 
         craneLib = crane.mkLib pkgs;
@@ -429,6 +429,9 @@
       {
         packages = crates // { default = crates.new; } // {
           solana-platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+          solana-cli = pkgs.callPackage ownPkgs.solana-cli { };
+          # anchor-cli = pkgs.callPackage ownPkgs.anchor-cli { };
+          # spl-token = pkgs.callPackage ownPkgs.spl-token { };
         };
         checks = tests;
         devShells.default = with pkgs; mkShellNoCC {
