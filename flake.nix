@@ -49,6 +49,65 @@
             targets = [ ];
           };
 
+          cargo-build-sbf = { pkgs, version ? "2.2.3" }:
+            let
+              version = srcs.agave.version;
+              src = srcs.agave.src;
+              platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+
+              # craneLib = (crane.mkLib pkgs).overrideToolchain ownPkgs.rust;
+            in
+            craneLib.buildPackage {
+              pname = "cargo-build-sbf";
+              inherit src version;
+
+              # Build only the cargo-build-sbf binary
+              cargoExtraArgs = "--bin=cargo-build-sbf";
+              buildAndTestSubdir = "sdk/cargo-build-sbf";
+
+              # Apply the patch to remove rustup dependency
+              patches = [ ./cargo-build-sbf-no-rustup.patch ];
+
+              strictDeps = true;
+              doCheck = false;
+
+              nativeBuildInputs = [
+                pkgs.protobuf
+                pkgs.pkg-config
+                pkgs.makeWrapper
+              ];
+              buildInputs = [
+                pkgs.openssl
+                pkgs.rustPlatform.bindgenHook
+              ]
+              ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
+              ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx ];
+
+              # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
+              NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
+
+              # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
+              OPENSSL_NO_VENDOR = 1;
+
+              postInstall = ''
+                # original from solana-cli:
+                # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
+                # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
+                # wrapProgram $out/bin/cargo-build-sbf \
+                #     --prefix PATH : "$rust" \
+                #     --set SBF_SDK_PATH "$sbfsdkdir" \
+                #     --append-flags --no-rustup-override \
+                #     --append-flags --skip-tools-install
+
+                # Wrap cargo-build-sbf to use our platform tools
+                wrapProgram $out/bin/cargo-build-sbf \
+                  --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
+                  --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
+                  --append-flags --no-rustup-override \
+                  --append-flags --skip-tools-install
+              '';
+            };
+
           spl-token = { pkgs, version ? "5.1.0" }:
             let
               # version = "5.1.0";
@@ -153,7 +212,7 @@
               src = srcs.agave.src;
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
-              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
+              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
 
               commonArgs = {
                 pname = "solana-cli";
@@ -214,14 +273,6 @@
                 postInstall = ''
                   mkdir -p $out/bin/platform-tools-sdk/sbf
                   cp -a ./platform-tools-sdk/sbf/* $out/bin/platform-tools-sdk/sbf/
-
-                  rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-                  sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
-                  wrapProgram $out/bin/cargo-build-sbf \
-                    --prefix PATH : "$rust" \
-                    --set SBF_SDK_PATH "$sbfsdkdir" \
-                    --append-flags --no-rustup-override \
-                    --append-flags --skip-tools-install
                 '';
 
                 passthru.updateScript = nix-update-script { };
@@ -353,6 +404,7 @@
           pkgs.cargo-nextest
           (callPackage ownPkgs.spl-token { })
           (callPackage ownPkgs.solana-cli { })
+          (callPackage ownPkgs.cargo-build-sbf { })
           # ownPkgs.solana-platform-tools
           (callPackage ownPkgs.anchor-cli { })
         ];
@@ -392,38 +444,37 @@
         };
 
         wd = "$(git rev-parse --show-toplevel)";
-        scripts = mapAttrs (name: txt: pkgs.writeScriptBin name txt)
-          {
-            # run = ''cargo run $(packages) $@ '';
-            run = ''cargo run $@ '';
-            # utest = ''cargo nextest run --workspace --nocapture -- $SINGLE_TEST '';
-            # utest = ''set -x; cargo nextest run $(packages) --nocapture "$@" -- $SINGLE_TEST '';
-            check = ''nix flake check --show-trace'';
-            # cpkg = ''code ${(dbg solana-nix.packages)}'';
+        scripts = mapAttrs (name: txt: pkgs.writeScriptBin name txt) {
+          # run = ''cargo run $(packages) $@ '';
+          run = ''cargo run $@ '';
+          # utest = ''cargo nextest run --workspace --nocapture -- $SINGLE_TEST '';
+          # utest = ''set -x; cargo nextest run $(packages) --nocapture "$@" -- $SINGLE_TEST '';
+          check = ''nix flake check --show-trace'';
+          # cpkg = ''code ${(dbg solana-nix.packages)}'';
 
-            prun = ''cargo run -p $@ '';
-            # build = ''nix build . --show-trace '';
-            packages = ''if [ -n "$CRATE" ]; then echo "-p $CRATE"; else echo "--workspace"; fi '';
-            ptest = ''package="$1"; shift; cargo nextest run -p "$package" --nocapture "$@" -- "$SINGLE_TEST" '';
+          prun = ''cargo run -p $@ '';
+          # build = ''nix build . --show-trace '';
+          packages = ''if [ -n "$CRATE" ]; then echo "-p $CRATE"; else echo "--workspace"; fi '';
+          ptest = ''package="$1"; shift; cargo nextest run -p "$package" --nocapture "$@" -- "$SINGLE_TEST" '';
 
-            sol = ''solana --keypair "$KEY" $@'';
-            set-devnet = ''solana config set --url devnet'';
-            new-wallet = ''
-              if [ ! -f "$KEY" ]; then
-                solana-keygen new --no-bip39-passphrase --outfile "$KEY"
-              fi
-            '';
-            addr = ''solana address --keypair "$KEY"'';
-            airdrop = ''sol airdrop 2'';
+          sol = ''solana --keypair "$KEY" $@'';
+          set-devnet = ''solana config set --url devnet'';
+          new-wallet = ''
+            if [ ! -f "$KEY" ]; then
+              solana-keygen new --no-bip39-passphrase --outfile "$KEY"
+            fi
+          '';
+          addr = ''solana address --keypair "$KEY"'';
+          airdrop = ''sol airdrop 2'';
 
-            token = ''spl-token $@ '';
-            validator = ''solana-test-validator'';
+          token = ''spl-token $@ '';
+          validator = ''solana-test-validator'';
 
-            js = ''cd ${wd}/my-project; yarn install'';
-            build = ''set -x; mkdir -p "$IDL_DIR"; cd ${wd}/my-project; anchor build --idl "$IDL_DIR" --idl-ts "$IDL_DIR" '';
-            deploy = ''set -x; cd ${wd}/my-project; anchor deploy'';
-            utest = ''set -x; cd ${wd}/my-project; anchor test --provider.wallet "$KEY" '';
-          };
+          js = ''cd ${wd}/my-project; yarn install'';
+          build = ''set -x; mkdir -p "$IDL_DIR"; cd ${wd}/my-project; anchor build --idl "$IDL_DIR" --idl-ts "$IDL_DIR" '';
+          deploy = ''set -x; cd ${wd}/my-project; anchor deploy'';
+          utest = ''set -x; cd ${wd}/my-project; anchor test --provider.wallet "$KEY" '';
+        };
 
       in
       {
@@ -432,6 +483,7 @@
           solana-cli = pkgs.callPackage ownPkgs.solana-cli { };
           anchor-cli = pkgs.callPackage ownPkgs.anchor-cli { };
           spl-token = pkgs.callPackage ownPkgs.spl-token { };
+          cargo-build-sbf = pkgs.callPackage ownPkgs.cargo-build-sbf { };
         };
         checks = tests;
         devShells.default = with pkgs; mkShellNoCC {
@@ -440,7 +492,7 @@
           shellHook = ''
             ${my-utils.binaries.${system}.configure-vscode};
             dotenv
-            mkdir -p "$KEYS_DIR"; mkdir -p "$IDL_DIR" 
+            mkdir -p "$KEYS_DIR"; mkdir -p "$IDL_DIR"
           '';
         };
       }
