@@ -49,64 +49,7 @@
             targets = [ ];
           };
 
-          cargo-build-sbf = { pkgs, version ? "2.2.3" }:
-            let
-              version = srcs.agave.version;
-              src = srcs.agave.src;
-              platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
-              # craneLib = (crane.mkLib pkgs).overrideToolchain ownPkgs.rust;
-            in
-            craneLib.buildPackage {
-              pname = "cargo-build-sbf";
-              inherit src version;
-
-              # Build only the cargo-build-sbf binary
-              cargoExtraArgs = "--bin=cargo-build-sbf";
-              buildAndTestSubdir = "sdk/cargo-build-sbf";
-
-              # Apply the patch to remove rustup dependency
-              patches = [ ./cargo-build-sbf-no-rustup.patch ];
-
-              strictDeps = true;
-              doCheck = false;
-
-              nativeBuildInputs = [
-                pkgs.protobuf
-                pkgs.pkg-config
-                pkgs.makeWrapper
-              ];
-              buildInputs = [
-                pkgs.openssl
-                pkgs.rustPlatform.bindgenHook
-              ]
-              ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
-              ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx ];
-
-              # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
-              NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
-
-              # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
-              OPENSSL_NO_VENDOR = 1;
-
-              postInstall = ''
-                # original from solana-cli:
-                # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-                # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
-                # wrapProgram $out/bin/cargo-build-sbf \
-                #     --prefix PATH : "$rust" \
-                #     --set SBF_SDK_PATH "$sbfsdkdir" \
-                #     --append-flags --no-rustup-override \
-                #     --append-flags --skip-tools-install
-
-                # Wrap cargo-build-sbf to use our platform tools
-                wrapProgram $out/bin/cargo-build-sbf \
-                  --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
-                  --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
-                  --append-flags --no-rustup-override \
-                  --append-flags --skip-tools-install
-              '';
-            };
 
           spl-token = { pkgs, version ? "5.1.0" }:
             let
@@ -204,6 +147,71 @@
 
               # We need to preserve metadata in .rlib, which might get stripped on macOS. See https://github.com/NixOS/nixpkgs/issues/218712
               stripExclude = [ "*.rlib" ];
+            };
+
+          cargo-build-sbf = { pkgs, version ? "2.2.3" }:
+            let
+              version = srcs.agave.version;
+              src = srcs.agave.src;
+              platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+            in
+            craneLib.buildPackage {
+              pname = "cargo-build-sbf";
+              inherit src version;
+
+              # Build only the cargo-build-sbf binary
+              cargoExtraArgs = "--bin=cargo-build-sbf";
+              buildAndTestSubdir = "platform-tools-sdk/cargo-build-sbf";
+
+              # Apply the patch to remove rustup dependency
+              patches = [ ./cargo-build-sbf-main.patch ];
+              # patchPhase = ''
+              #   # Your custom commands here
+              #   echo "Custom patch phase"
+              #   ls -la $src
+              #   exit 1
+              # '';
+
+              strictDeps = true;
+              doCheck = false;
+
+              nativeBuildInputs = [
+                pkgs.protobuf
+                pkgs.pkg-config
+                pkgs.makeWrapper
+              ];
+              buildInputs = [
+                pkgs.openssl
+                pkgs.rustPlatform.bindgenHook
+              ]
+              ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
+              ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx ];
+
+              # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
+              NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
+
+              # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
+              OPENSSL_NO_VENDOR = 1;
+
+              postInstall = ''
+                ls -a $src
+                exit 1
+                # original from solana-cli:
+                # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
+                # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
+                # wrapProgram $out/bin/cargo-build-sbf \
+                #     --prefix PATH : "$rust" \
+                #     --set SBF_SDK_PATH "$sbfsdkdir" \
+                #     --append-flags --no-rustup-override \
+                #     --append-flags --skip-tools-install
+
+                # Wrap cargo-build-sbf to use our platform tools
+                wrapProgram $out/bin/cargo-build-sbf \
+                  --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
+                  --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
+                  --append-flags --no-rustup-override \
+                  --append-flags --skip-tools-install
+              '';
             };
 
           solana-cli = { pkgs, version ? "2.23" }:

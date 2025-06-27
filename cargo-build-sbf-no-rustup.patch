@@ -1,7 +1,7 @@
 diff --git a/sdk/cargo-build-sbf/src/main.rs b/sdk/cargo-build-sbf/src/main.rs
 index 6d02499c8f..693aa9cda2 100644
---- a/sdk/cargo-build-sbf/src/main.rs
-+++ b/sdk/cargo-build-sbf/src/main.rs
+--- a/platform-tools-sdk/cargo-build-sbf/src/main.rs
++++ b/platform-tools-sdk/cargo-build-sbf/src/main.rs
 @@ -606,40 +606,6 @@ fn build_solana_package(
      } else {
          "x86_64"
