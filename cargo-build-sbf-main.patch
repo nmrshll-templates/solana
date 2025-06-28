@@ -1,0 +1,73 @@
+diff --git i/platform-tools-sdk/cargo-build-sbf/src/main.rs w/platform-tools-sdk/cargo-build-sbf/src/main.rs
+index 6925a26199..835ff42b2d 100644
+--- i/platform-tools-sdk/cargo-build-sbf/src/main.rs
++++ w/platform-tools-sdk/cargo-build-sbf/src/main.rs
+@@ -418,68 +418,6 @@ fn install_tools(
+         }
+     });
+ 
+-    if !config.skip_tools_install {
+-        let arch = if cfg!(target_arch = "aarch64") {
+-            "aarch64"
+-        } else {
+-            "x86_64"
+-        };
+-
+-        let platform_tools_version =
+-            validate_platform_tools_version(platform_tools_version, DEFAULT_PLATFORM_TOOLS_VERSION);
+-
+-        let platform_tools_download_file_name = if cfg!(target_os = "windows") {
+-            format!("platform-tools-windows-{arch}.tar.bz2")
+-        } else if cfg!(target_os = "macos") {
+-            format!("platform-tools-osx-{arch}.tar.bz2")
+-        } else {
+-            format!("platform-tools-linux-{arch}.tar.bz2")
+-        };
+-        let package = "platform-tools";
+-        let target_path = make_platform_tools_path_for_version(package, &platform_tools_version);
+-        install_if_missing(
+-            config,
+-            package,
+-            "https://github.com/anza-xyz/platform-tools/releases/download",
+-            platform_tools_download_file_name.as_str(),
+-            &platform_tools_version,
+-            &target_path,
+-        )
+-        .unwrap_or_else(|err| {
+-            // The package version directory doesn't contain a valid
+-            // installation, and it should be removed.
+-            let target_path_parent = target_path.parent().expect("Invalid package path");
+-            if target_path_parent.exists() {
+-                fs::remove_dir_all(target_path_parent).unwrap_or_else(|err| {
+-                    error!(
+-                        "Failed to remove {} while recovering from installation failure: {}",
+-                        target_path_parent.to_string_lossy(),
+-                        err,
+-                    );
+-                    exit(1);
+-                });
+-            }
+-            error!("Failed to install platform-tools: {}", err);
+-            exit(1);
+-        });
+-    }
+-
+-    if config.no_rustup_override {
+-        let target_triple = rust_target_triple(config);
+-        check_solana_target_installed(&target_triple);
+-    } else {
+-        link_solana_toolchain(config);
+-        // RUSTC variable overrides cargo +<toolchain> mechanism of
+-        // selecting the rust compiler and makes cargo run a rust compiler
+-        // other than the one linked in Solana toolchain. We have to prevent
+-        // this by removing RUSTC from the child process environment.
+-        if env::var("RUSTC").is_ok() {
+-            warn!(
+-                "Removed RUSTC from cargo environment, because it overrides +solana cargo command line option."
+-            );
+-            env::remove_var("RUSTC")
+-        }
+-    }
+ }
+ 
+ fn prepare_environment(
