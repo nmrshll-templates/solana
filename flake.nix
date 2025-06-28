@@ -331,10 +331,7 @@
 
                 cargoExtraArgs = "-p ${pname}";
 
-                meta = {
-                  mainProgram = "anchor";
-                  description = "Anchor cli";
-                };
+                meta = { mainProgram = "anchor"; description = "Anchor cli"; };
 
                 # passthru = {
                 #   otherVersions = builtins.attrNames versionsDeps;
