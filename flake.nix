@@ -244,71 +244,18 @@
 
               }
             );
-          # craneLib.buildPackage {
-          #   pname = "cargo-build-sbf";
-          #   inherit version;
-          #   src = srcPatched;
-
-          #   # Build only the cargo-build-sbf binary
-          #   cargoExtraArgs = "--bin=cargo-build-sbf";
-          #   # buildAndTestSubdir = "platform-tools-sdk/cargo-build-sbf";
-          #   # dummySrc = src;
-
-          #   strictDeps = true;
-          #   doCheck = false;
-
-          #   nativeBuildInputs = [
-          #     pkgs.protobuf
-          #     pkgs.pkg-config
-          #     pkgs.makeWrapper
-          #   ];
-          #   buildInputs = [
-          #     pkgs.openssl
-          #     pkgs.rustPlatform.bindgenHook
-          #   ]
-          #   ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
-          #   ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx ];
-
-          #   # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
-          #   NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
-
-          #   # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
-          #   OPENSSL_NO_VENDOR = 1;
-
-          #   postInstall = ''
-          #     ls -a $src
-          #     exit 1
-          #     # original from solana-cli:
-          #     # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-          #     # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
-          #     # wrapProgram $out/bin/cargo-build-sbf \
-          #     #     --prefix PATH : "$rust" \
-          #     #     --set SBF_SDK_PATH "$sbfsdkdir" \
-          #     #     --append-flags --no-rustup-override \
-          #     #     --append-flags --skip-tools-install
-
-          #     # Wrap cargo-build-sbf to use our platform tools
-          #     wrapProgram $out/bin/cargo-build-sbf \
-          #       --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
-          #       --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
-          #       --append-flags --no-rustup-override \
-          #       --append-flags --skip-tools-install
-          #   '';
-          # };
-
 
           solana-cli = { pkgs, version ? "2.2.3" }:
             let
-              agaveVersion = version;
-              agaveSrc = srcs.agave { version = agaveVersion; };
-              # platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+              version = srcs.agave.version; # TODO inline source, use version arg
+              src = srcs.agave.src;
+              platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
-              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
+              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
 
               commonArgs = {
                 pname = "solana-cli";
-                src = agaveSrc;
-                inherit version;
+                inherit src version;
 
                 strictDeps = true;
                 cargoExtraArgs = lib.concatMapStringsSep " " (n: "--bin=${n}") solanaPkgs;
@@ -353,7 +300,7 @@
                   # specify dummySrc manually to avoid errors when parsing the manifests for target-less crates
                   # such as client-test. The sources rarely change in this context so it shouldn't matter much
                   # TODO: use proper (custom) dummySrc
-                  dummySrc = agaveSrc;
+                  dummySrc = src;
                 }
               );
             in
@@ -365,12 +312,19 @@
                 postInstall = ''
                   mkdir -p $out/bin/platform-tools-sdk/sbf
                   cp -a ./platform-tools-sdk/sbf/* $out/bin/platform-tools-sdk/sbf/
+
+                  rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
+                  sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
+                  wrapProgram $out/bin/cargo-build-sbf \
+                    --prefix PATH : "$rust" \
+                    --set SBF_SDK_PATH "$sbfsdkdir" \
+                    --append-flags --no-rustup-override \
+                    --append-flags --skip-tools-install
                 '';
 
                 passthru.updateScript = nix-update-script { };
               }
             );
-
 
           anchor-cli = { pkgs, version ? "0.31.1" }:
             let
