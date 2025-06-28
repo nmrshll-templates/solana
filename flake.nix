@@ -159,102 +159,102 @@
               stripExclude = [ "*.rlib" ];
             };
 
-          cargo-build-sbf = { pkgs, version ? "2.3.0" }:
-            let
-              # version = srcs.agave.version;
-              platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
-              srcPatched = dbg (stdenv.mkDerivation {
-                name = "cargo-build-sbf-patched";
-                src = srcs.agave { inherit version; };
-                phases = [
-                  "unpackPhase"
-                  "patchPhase"
-                  "installPhase"
-                ];
-                patches = [ ./cargo-build-sbf-main.patch ];
-                installPhase = ''
-                  runHook preInstall
-                  mkdir -p $out
-                  cp -r ./* $out/
-                  runHook postInstall
-                '';
-              });
-              commonArgs = rec {
-                pname = "cargo-build-sbf";
-                inherit version;
-                src = srcPatched;
+          # cargo-build-sbf = { pkgs, version ? "2.3.0" }:
+          #   let
+          #     # version = srcs.agave.version;
+          #     platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
+          #     srcPatched = dbg (stdenv.mkDerivation {
+          #       name = "cargo-build-sbf-patched";
+          #       src = srcs.agave { inherit version; };
+          #       phases = [
+          #         "unpackPhase"
+          #         "patchPhase"
+          #         "installPhase"
+          #       ];
+          #       patches = [ ./cargo-build-sbf-main.patch ];
+          #       installPhase = ''
+          #         runHook preInstall
+          #         mkdir -p $out
+          #         cp -r ./* $out/
+          #         runHook postInstall
+          #       '';
+          #     });
+          #     commonArgs = rec {
+          #       pname = "cargo-build-sbf";
+          #       inherit version;
+          #       src = srcPatched;
 
-                strictDeps = true;
-                cargoExtraArgs = "--bin=${pname}";
+          #       strictDeps = true;
+          #       cargoExtraArgs = "--bin=${pname}";
 
-                doCheck = false;
-                nativeBuildInputs = [
-                  pkgs.protobuf
-                  pkgs.pkg-config
-                ];
-                buildInputs = [
-                  pkgs.openssl
-                  pkgs.rustPlatform.bindgenHook
-                  pkgs.makeWrapper
-                ]
-                ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
-                ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx /*IOKit Security AppKit System Libsystem*/ ];
+          #       doCheck = false;
+          #       nativeBuildInputs = [
+          #         pkgs.protobuf
+          #         pkgs.pkg-config
+          #       ];
+          #       buildInputs = [
+          #         pkgs.openssl
+          #         pkgs.rustPlatform.bindgenHook
+          #         pkgs.makeWrapper
+          #       ]
+          #       ++ lib.optionals stdenv.isLinux [ pkgs.udev ]
+          #       ++ lib.optionals stdenv.isDarwin [ pkgs.libcxx /*IOKit Security AppKit System Libsystem*/ ];
 
-                # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
-                NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
+          #       # https://crane.dev/faq/rebuilds-bindgen.html?highlight=bindgen#i-see-the-bindgen-crate-constantly-rebuilding
+          #       NIX_OUTPATH_USED_AS_RANDOM_SEED = "aaaaaaaaaa";
 
-                # Used by build.rs in the rocksdb-sys crate
-                ROCKSDB_LIB_DIR = "${pkgs.rocksdb_8_11}/lib";
-                ROCKSDB_INCLUDE_DIR = "${pkgs.rocksdb_8_11}/include";
+          #       # Used by build.rs in the rocksdb-sys crate
+          #       ROCKSDB_LIB_DIR = "${pkgs.rocksdb_8_11}/lib";
+          #       ROCKSDB_INCLUDE_DIR = "${pkgs.rocksdb_8_11}/include";
 
-                # For darwin systems
-                CPPFLAGS = lib.optionals stdenv.isDarwin "-isystem ${lib.getDev pkgs.libcxx}/include/c++/v1";
-                LDFLAGS = lib.optionals stdenv.isDarwin "-L${lib.getLib pkgs.libcxx}/lib";
+          #       # For darwin systems
+          #       CPPFLAGS = lib.optionals stdenv.isDarwin "-isystem ${lib.getDev pkgs.libcxx}/include/c++/v1";
+          #       LDFLAGS = lib.optionals stdenv.isDarwin "-L${lib.getLib pkgs.libcxx}/lib";
 
-                # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
-                OPENSSL_NO_VENDOR = 1;
-              };
-              cargoArtifacts = craneLib.buildDepsOnly (
-                commonArgs
-                // {
-                  # inherit cargoVendorDir;
-                  # specify dummySrc manually to avoid errors when parsing the manifests for target-less crates
-                  # such as client-test. The sources rarely change in this context so it shouldn't matter much
-                  # TODO: use proper (custom) dummySrc
-                  dummySrc = srcPatched;
-                }
-              );
-            in
-            craneLib.buildPackage (
-              commonArgs
-              // {
-                inherit cargoArtifacts;
+          #       # If set, always finds OpenSSL in the system, even if the vendored feature is enabled.
+          #       OPENSSL_NO_VENDOR = 1;
+          #     };
+          #     cargoArtifacts = craneLib.buildDepsOnly (
+          #       commonArgs
+          #       // {
+          #         # inherit cargoVendorDir;
+          #         # specify dummySrc manually to avoid errors when parsing the manifests for target-less crates
+          #         # such as client-test. The sources rarely change in this context so it shouldn't matter much
+          #         # TODO: use proper (custom) dummySrc
+          #         dummySrc = srcPatched;
+          #       }
+          #     );
+          #   in
+          #   craneLib.buildPackage (
+          #     commonArgs
+          #     // {
+          #       inherit cargoArtifacts;
 
-                postInstall = ''
-                  # original from solana-cli:
-                  # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-                  # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
-                  # wrapProgram $out/bin/cargo-build-sbf \
-                  #     --prefix PATH : "$rust" \
-                  #     --set SBF_SDK_PATH "$sbfsdkdir" \
-                  #     --append-flags --no-rustup-override \
-                  #     --append-flags --skip-tools-install
+          #       postInstall = ''
+          #         # original from solana-cli:
+          #         # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
+          #         # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
+          #         # wrapProgram $out/bin/cargo-build-sbf \
+          #         #     --prefix PATH : "$rust" \
+          #         #     --set SBF_SDK_PATH "$sbfsdkdir" \
+          #         #     --append-flags --no-rustup-override \
+          #         #     --append-flags --skip-tools-install
 
-                  # Wrap cargo-build-sbf to use our platform tools
-                  wrapProgram $out/bin/cargo-build-sbf \
-                    --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
-                    --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
-                    --append-flags --no-rustup-override \
-                    --append-flags --skip-tools-install
-                '';
+          #         # Wrap cargo-build-sbf to use our platform tools
+          #         wrapProgram $out/bin/cargo-build-sbf \
+          #           --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
+          #           --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
+          #           --append-flags --no-rustup-override \
+          #           --append-flags --skip-tools-install
+          #       '';
 
-              }
-            );
+          #     }
+          #   );
 
           solana-cli = { pkgs, version ? "2.2.3" }:
             let
               version = srcs.agaveOld.version; # TODO inline source, use version arg
-              src = srcs.agaveOld.src;
+              src = dbg srcs.agaveOld.src;
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
               solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
@@ -455,7 +455,7 @@
           pkgs.cargo-nextest
           (callPackage ownPkgs.spl-token { })
           (callPackage ownPkgs.solana-cli { })
-          (callPackage ownPkgs.cargo-build-sbf { })
+          # (callPackage ownPkgs.cargo-build-sbf { })
           # ownPkgs.solana-platform-tools
           (callPackage ownPkgs.anchor-cli { })
         ];
@@ -535,7 +535,7 @@
           solana-cli = pkgs.callPackage ownPkgs.solana-cli { };
           anchor-cli = pkgs.callPackage ownPkgs.anchor-cli { };
           spl-token = pkgs.callPackage ownPkgs.spl-token { };
-          cargo-build-sbf = pkgs.callPackage ownPkgs.cargo-build-sbf { };
+          # cargo-build-sbf = pkgs.callPackage ownPkgs.cargo-build-sbf { };
         };
         checks = tests;
         devShells.default = with pkgs; mkShellNoCC {
