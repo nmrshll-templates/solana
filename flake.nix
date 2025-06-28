@@ -21,12 +21,15 @@
         inherit (pkgs) lib stdenv callPackage;
 
         srcs = {
-          agave =
-            let version = "2.2.3"; sha256 = "sha256-nRCamrwzoPX0cAEcP6p0t0t9Q41RjM6okupOPkJH5lQ=";
-            in {
-              inherit version;
-              src = pkgs.fetchFromGitHub { owner = "anza-xyz"; repo = "agave"; rev = "v${version}"; fetchSubmodules = true; inherit sha256; };
-            };
+          agave = { version }:
+            let
+              sha256 = {
+                "2.3.0" = "sha256-JrK8U0yYq2IS2luC1nbSM0nOC0XZLYKgtv7GBEPtCns=";
+                "2.2.3" = "sha256-nRCamrwzoPX0cAEcP6p0t0t9Q41RjM6okupOPkJH5lQ=";
+              }.${version};
+            in
+            pkgs.fetchFromGitHub { inherit sha256; owner = "anza-xyz"; repo = "agave"; rev = "v${version}"; fetchSubmodules = true; };
+
 
           solana-platform-tools =
             let
@@ -95,6 +98,7 @@
           solana-platform-tools = { pkgs, version ? "1.45" }:
             let
               source = srcs.solana-platform-tools.${version};
+              agaveSrc = srcs.agave { version = "2.2.3"; };
             in
             stdenv.mkDerivation {
               inherit version;
@@ -135,7 +139,7 @@
                 ln -s ${pkgs.criterion}/share $criterion/share
                 touch $criterion-v${pkgs.criterion.version}.md
 
-                cp -ar ${srcs.agave.src}/platform-tools-sdk/sbf/* $out/bin/platform-tools-sdk/sbf/
+                cp -ar ${agaveSrc}/platform-tools-sdk/sbf/* $out/bin/platform-tools-sdk/sbf/
               '';
 
               # A bit ugly, but liblldb.so uses libedit.so.2 and nix provides libedit.so
@@ -147,10 +151,10 @@
               stripExclude = [ "*.rlib" ];
             };
 
-          solana-cli = { pkgs, version ? "2.23" }:
+          solana-cli = { pkgs, version ? "2.2.3" }:
             let
-              version = srcs.agave.version; # TODO inline source, use version arg
-              src = srcs.agave.src;
+              # version = srcs.agave.version; # TODO inline source, use version arg
+              src = srcs.agave { version = "2.2.3"; };
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
               solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
