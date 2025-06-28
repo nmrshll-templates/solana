@@ -21,6 +21,12 @@
         inherit (pkgs) lib stdenv callPackage;
 
         srcs = {
+          agaveOld =
+            let version = "2.2.3"; sha256 = "sha256-nRCamrwzoPX0cAEcP6p0t0t9Q41RjM6okupOPkJH5lQ=";
+            in {
+              inherit version;
+              src = pkgs.fetchFromGitHub { owner = "anza-xyz"; repo = "agave"; rev = "v${version}"; fetchSubmodules = true; inherit sha256; };
+            };
           agave = { version }:
             let
               # version = "2.2.3"; sha256 = "sha256-nRCamrwzoPX0cAEcP6p0t0t9Q41RjM6okupOPkJH5lQ=";
@@ -247,8 +253,8 @@
 
           solana-cli = { pkgs, version ? "2.2.3" }:
             let
-              version = srcs.agave.version; # TODO inline source, use version arg
-              src = srcs.agave.src;
+              version = srcs.agaveOld.version; # TODO inline source, use version arg
+              src = srcs.agaveOld.src;
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
               solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
