@@ -248,7 +248,7 @@
               src = srcs.agave { version = "2.2.3"; };
               platform-tools = pkgs.callPackage ownPkgs.solana-platform-tools { };
 
-              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" "cargo-build-sbf" "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
+              solanaPkgs = [ "agave-install" "agave-install-init" "agave-ledger-tool" "agave-validator" "agave-watchtower" /*"cargo-build-sbf"*/ "cargo-test-sbf" "rbpf-cli" "solana" "solana-bench-tps" "solana-faucet" "solana-gossip" "solana-keygen" "solana-log-analyzer" "solana-net-shaper" "solana-dos" "solana-stake-accounts" "solana-test-validator" "solana-tokens" "solana-genesis" ];
 
               commonArgs = {
                 pname = "solana-cli";
@@ -310,13 +310,13 @@
                   mkdir -p $out/bin/platform-tools-sdk/sbf
                   cp -a ./platform-tools-sdk/sbf/* $out/bin/platform-tools-sdk/sbf/
 
-                  rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
-                  sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
-                  wrapProgram $out/bin/cargo-build-sbf \
-                    --prefix PATH : "$rust" \
-                    --set SBF_SDK_PATH "$sbfsdkdir" \
-                    --append-flags --no-rustup-override \
-                    --append-flags --skip-tools-install
+                  # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
+                  # sbfsdkdir=${platform-tools}/bin/platform-tools-sdk/sbf
+                  # wrapProgram $out/bin/cargo-build-sbf \
+                  #   --prefix PATH : "$rust" \
+                  #   --set SBF_SDK_PATH "$sbfsdkdir" \
+                  #   --append-flags --no-rustup-override \
+                  #   --append-flags --skip-tools-install
                 '';
 
                 passthru.updateScript = nix-update-script { };
