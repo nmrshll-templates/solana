@@ -234,9 +234,10 @@
                   # Wrap cargo-build-sbf to use our platform tools
                   wrapProgram $out/bin/cargo-build-sbf \
                     --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
-                    --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" \
-                    --append-flags --no-rustup-override \
-                    --append-flags --skip-tools-install
+                    --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" 
+                    # \
+                    # --append-flags --no-rustup-override \
+                    # --append-flags --skip-tools-install
                 '';
 
               }

@@ -1,11 +1,12 @@
 diff --git i/platform-tools-sdk/cargo-build-sbf/src/main.rs w/platform-tools-sdk/cargo-build-sbf/src/main.rs
-index 6925a26199..835ff42b2d 100644
+index 6925a26199..63d1996823 100644
 --- i/platform-tools-sdk/cargo-build-sbf/src/main.rs
 +++ w/platform-tools-sdk/cargo-build-sbf/src/main.rs
-@@ -418,68 +418,6 @@ fn install_tools(
+@@ -417,69 +417,6 @@ fn install_tools(
+             (None, None) => DEFAULT_PLATFORM_TOOLS_VERSION,
          }
      });
- 
+-
 -    if !config.skip_tools_install {
 -        let arch = if cfg!(target_arch = "aarch64") {
 -            "aarch64"
@@ -71,3 +72,13 @@ index 6925a26199..835ff42b2d 100644
  }
  
  fn prepare_environment(
+@@ -578,9 +515,6 @@ fn invoke_cargo(config: &Config) {
+ 
+     let cargo_build = PathBuf::from("cargo");
+     let mut cargo_build_args = vec![];
+-    if !config.no_rustup_override {
+-        cargo_build_args.push("+solana");
+-    };
+ 
+     cargo_build_args.append(&mut vec!["build", "--release", "--target", &target_triple]);
+     if config.no_default_features {
