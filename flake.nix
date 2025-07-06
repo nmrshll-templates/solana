@@ -221,6 +221,7 @@
               // {
                 inherit cargoArtifacts;
 
+                # wrap program by hand (instead of using wrapProgram)
                 postInstall = ''
                   # original from solana-cli:
                   # rust=${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin
@@ -232,12 +233,49 @@
                   #     --append-flags --skip-tools-install
 
                   # Wrap cargo-build-sbf to use our platform tools
-                  wrapProgram $out/bin/cargo-build-sbf \
-                    --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
-                    --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" 
-                    # \
+                  # wrapProgram $out/bin/cargo-build-sbf \
+                  #   --set SBF_SDK_PATH "${platform-tools}/bin/platform-tools-sdk/sbf" \
+                  #   --set RUSTC "${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc" 
+                  #   # \
                     # --append-flags --no-rustup-override \
                     # --append-flags --skip-tools-install
+
+                  WRAPPED_PROG="$out/bin/.cargo-build-sbf-wrapped"
+                  mv $out/bin/cargo-build-sbf $out/bin/.cargo-build-sbf-wrapped
+                  cat > $out/bin/cargo-build-sbf <<'EOF'
+                    #!/bin/sh
+                    set -x
+
+                    required_flags=( "--no-rustup-override" "--skip-tools-install" )
+                    seen_flags="" # Track seen flags with a string (space-delimited)
+                    extraArgs=() # Collect extra args to add (array of strings)
+
+                    # Mark flags seen in command-line arguments
+                    for arg in "$@"; do
+                        for flag in "''${required_flags[@]}"; do
+                            if [ "$arg" = "$flag" ]; then
+                                seen_flags="$seen_flags $flag"
+                                break
+                            fi
+                        done
+                    done
+
+                    # Determine missing flags and add to extraArgs
+                    for flag in "''${required_flags[@]}"; do
+                        echo "$seen_flags" | grep -qw \"$flag\" || extraArgs+=("$flag")
+                    done
+
+                    # Output for demonstration
+                    echo "Original args: $@"
+                    echo "Extra args to add: ''${extraArgs[@]}"
+
+                    export SBF_SDK_PATH="${platform-tools}/bin/platform-tools-sdk/sbf"
+                    export RUSTC="${platform-tools}/bin/platform-tools-sdk/sbf/dependencies/platform-tools/rust/bin/rustc"
+                    exec -a "$0" WRAPPED_PROG "$@"
+                  EOF
+                  sed -i "s|WRAPPED_PROG|''$WRAPPED_PROG|g" $out/bin/cargo-build-sbf
+                  
+                  chmod +x $out/bin/cargo-build-sbf
                 '';
 
               }
